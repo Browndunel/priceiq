@@ -1,0 +1,18 @@
+# Données et modèles générés — ne pas commiter
+data/*.json
+data/*.parquet
+data/*.duckdb
+models/model.pkl
+models/metrics.json
+
+# Logs Airflow
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Docker
+.dockerenv

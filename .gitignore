@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Node
+node_modules/
+priceiq/dist/
+
+# Données générées Airflow
+priceiq-airflow/data/*.json
+priceiq-airflow/data/*.parquet
+priceiq-airflow/data/*.duckdb
+priceiq-airflow/models/model.pkl
+priceiq-airflow/models/metrics.json
+priceiq-airflow/logs/
+
+# Secrets
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
