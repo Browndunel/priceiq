@@ -14,19 +14,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import duckdb
 import polars as pl
-import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 import random
-import math
+import os
 from datetime import datetime, timedelta
-from typing import Optional
 
 # ─── Globals ──────────────────────────────────────────────────────────────────
-DB_PATH  = "/app/data/priceiq.duckdb"
-_model   = "/app/models/model.pkl"   # RandomForest instance
+CSV_PATH = os.getenv(
+    "CSV_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "priceiq_dataset_cleaned.csv")
+)
+_model   = None   # RandomForestRegressor instance
 _df_pl   = None   # Polars DataFrame (full dataset)
 _con     = None   # DuckDB connection
 
@@ -35,26 +36,27 @@ _con     = None   # DuckDB connection
 async def lifespan(app: FastAPI):
     global _model, _df_pl, _con
 
-    print("🚀 Loading dataset with Polars...")
-    _df_pl = pl.read_csv(DB_PATH).with_columns([
+    print("[startup] Loading dataset with Polars...")
+    _df_pl = pl.read_csv(CSV_PATH).with_columns([
         pl.col("date").str.to_date("%Y-%m-%d"),
         pl.col("in_stock").cast(pl.Boolean),
     ])
-    print(f"✅ {_df_pl.shape[0]:,} rows loaded — {_df_pl['product_name'].n_unique()} products")
+    print(f"[startup] {_df_pl.shape[0]:,} rows loaded — "
+          f"{_df_pl['product_name'].n_unique()} products")
 
-    print("🦆 Registering DuckDB view...")
+    print("[startup] Registering DuckDB view...")
     _con = duckdb.connect()
     _con.register("prices", _df_pl.to_pandas())
-    print("✅ DuckDB ready")
+    print("[startup] DuckDB ready")
 
-    print("🧠 Training RandomForest model...")
+    print("[startup] Training RandomForest model...")
     _model = _train_model(_df_pl)
-    print("✅ Model trained")
+    print("[startup] Model trained")
 
     yield  # app runs here
 
     _con.close()
-    print("🛑 Shutdown")
+    print("[shutdown] done")
 
 # ─── FastAPI app ──────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -64,9 +66,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:5173"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -103,7 +110,7 @@ def _train_model(df: pl.DataFrame) -> RandomForestRegressor:
     model.fit(X_train, y_train)
 
     mae = mean_absolute_error(y_test, model.predict(X_test))
-    print(f"   MAE: ₹{mae:.2f}")
+    print(f"   MAE: {mae:.2f}")
 
     return model
 
@@ -186,7 +193,7 @@ def get_prices(product_id: int):
     Current prices per retailer — uses DuckDB aggregation for max date,
     then adds live micro-fluctuation.
     """
-    df = _get_product_df(product_id)
+    _get_product_df(product_id)  # 404 guard
 
     # DuckDB: get latest price per retailer efficiently
     latest = _con.execute("""
