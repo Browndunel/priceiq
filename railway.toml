@@ -1,6 +1,14 @@
+# [build]
+# builder = "NIXPACKS"
+# buildCommand = "npm install && npm run build"
+
+
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install && npm run build"
+
+[deploy]
+startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+healthCheckPath = "/"
 
 [deploy]
 startCommand = "npx serve -s dist -l $PORT"
