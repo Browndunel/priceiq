@@ -1,35 +1,6 @@
-# [build]
-# builder = "NIXPACKS"
-# buildCommand = "npm install && npm run build"
-
-
 [build]
 builder = "NIXPACKS"
 
 [deploy]
 startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
 healthCheckPath = "/"
-
-[deploy]
-startCommand = "npx serve -s dist -l $PORT"
-```
-
-Variables d'environnement :
-```
-VITE_API_URL=https://TON_BACKEND.up.railway.app
-VITE_USE_MOCK=false
-```
-
-⚠️ Problème : Vite embed les variables au moment du **build**. Donc `VITE_API_URL` doit être définie **avant** le build. Dans Railway c'est automatique si tu mets la variable avant de déployer.
-
----
-
-**Étape 5 — Service Airflow**
-
-Dans Railway → **New Service** → **Deploy from GitHub** → `priceiq` → Root Directory : `priceiq-airflow`.
-
-Railway va détecter le `docker-compose.yml`. Il va lancer Airflow + Postgres automatiquement.
-
-Variables :
-```
-AIRFLOW__WEBSERVER__BASE_URL=https://TON_AIRFLOW.up.railway.app
