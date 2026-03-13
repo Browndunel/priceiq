@@ -19,6 +19,7 @@ priceiq-airflow/logs/
 .env
 .env.local
 .env.production
+echo ".claude/"
 
 # OS
 .DS_Store
